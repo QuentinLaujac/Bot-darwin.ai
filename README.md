@@ -7,14 +7,11 @@ For more information, visit [darewin.life](http://darewin.life/)
 
 This project is made with Node.js using ECMAScript 6 (packed via Webpack) and uses the Serverless framework. The entire technical stack is on AWS, allowing total scalability.
 
-![Alt text](https://cloudacademy.com/blog/wp-content/uploads/2016/05/serverless-framework-logo.png)
-
 ## Architecture
 
 The project architecture uses various AWS cloud components. In the diagram below we can see the different interactions.
 
-![infrastructure](http://darewin.life/images/infrastructure.png)
-
+![texte alternatif de l'image](img/infrastructure.png)
 
 **1.** When setting up the webhook from Messenger, Facebook will call our lambda function "webhookFB". It will check the token and send information back to Facebook to set up the "Start" button on Messenger.
 

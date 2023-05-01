@@ -1,0 +1,246 @@
+service: darewin-bot
+functions:
+  fbverify:
+    handler: src/handler.fbVerify
+    name: ${self:provider.stage}-webhookFB
+    description: Permet de valider le lien entre facebook messenger et notre bot 
+    events:
+      - http:
+          path: fbhook
+          method: GET
+          integration: lambda
+  fbmessages:
+    handler: src/handler.fbMessages
+    name: ${self:provider.stage}-handleMessage
+    description: Receptionne les messages de facebook et contient l'intelligence du bot 
+    timeout: 60 # Timeout for this specific function.  Overrides the default set above.
+    events:
+      - http:
+          path: fbhook
+          method: POST
+          integration: lambda
+  postTopic:
+    handler: src/handler.postTopic
+    name: ${self:provider.stage}-postTopic
+    description: Reçoit en post https le json de modification / creation d'un nouveau topic 
+    timeout: 60 # Timeout for this specific function.  Overrides the default set above.
+    events:
+      - http:
+          path: postTopic
+          method: POST
+          integration: lambda
+  deliversMessageBoxes:
+    handler: src/handler.deliversMessageBoxes  
+    name: ${self:provider.stage}-deliversMessageBoxes
+    description: Evoie les messages facebook mis dans la queue
+    events:
+      - sqs:  
+          arn: arn:aws:sqs:${self:custom.defaultRegion}:${self:custom.idAWS}:${self:custom.defaultStage}-messages
+          batchSize: 1
+resources:  
+  Resources:
+    # une table dynamodb pour stocker les infos des users
+    DynamoDbUsersTable: # Les noms de ressources doivent être uniques
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.defaultStage}-users
+        AttributeDefinitions:
+          - AttributeName: senderId
+            AttributeType: S # string
+        KeySchema:
+          - AttributeName: senderId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    # une policy IAM pour permettre aux lambdas d'accéder à cette table dynamodb
+    DynamoDBUsersIamPolicy: # Y compris les noms des policies
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbUsersTable
+      Properties:
+        PolicyName: lambda-dynamodb-${self:custom.defaultStage}-users # Ce nom doit également être unique
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: 
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Scan
+              Resource: arn:aws:dynamodb:*:*:table/${self:custom.defaultStage}-users
+        Roles:
+          - Ref: IamRoleLambdaExecution
+
+      # une table dynamodb pour stocker les infos des users
+    DynamoDbuserLogTable: # Les noms de ressources doivent être uniques
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.defaultStage}-userLog
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S # string
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    # une policy IAM pour permettre aux lambdas d'accéder à cette table dynamodb
+    DynamoDBuserLogIamPolicy: # Y compris les noms des policies
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbuserLogTable
+      Properties:
+        PolicyName: lambda-dynamodb-${self:custom.defaultStage}-userLog # Ce nom doit également être unique
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: 
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Scan
+              Resource: arn:aws:dynamodb:*:*:table/${self:custom.defaultStage}-userLog
+        Roles:
+          - Ref: IamRoleLambdaExecution
+
+    # une table dynamodb pour stocker les infos des users
+    DynamoDbquestionStatTable: # Les noms de ressources doivent être uniques
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName:  ${self:custom.defaultStage}-questionStat
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S # string
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    # une policy IAM pour permettre aux lambdas d'accéder à cette table dynamodb
+    DynamoDBquestionStatIamPolicy: # Y compris les noms des policies
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbquestionStatTable
+      Properties:
+        PolicyName: lambda-dynamodb-${self:custom.defaultStage}-questionStat # Ce nom doit également être unique
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: 
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Scan
+              Resource: arn:aws:dynamodb:*:*:table/${self:custom.defaultStage}-questionStat
+        Roles:
+          - Ref: IamRoleLambdaExecution
+
+    # une table dynamodb pour stocker les infos des users
+    DynamoDbconversationTopicTable: # Les noms de ressources doivent être uniques
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.defaultStage}-conversationTopic
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S # string
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    # une policy IAM pour permettre aux lambdas d'accéder à cette table dynamodb
+    DynamoDBconversationTopicIamPolicy: # Y compris les noms des policies
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbconversationTopicTable
+      Properties:
+        PolicyName: lambda-dynamodb-${self:custom.defaultStage}-conversationTopic # Ce nom doit également être unique
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: 
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Scan
+              Resource: arn:aws:dynamodb:*:*:table/${self:custom.defaultStage}-conversationTopic
+        Roles:
+          - Ref: IamRoleLambdaExecution
+
+    Messages:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.sqs}
+        MessageRetentionPeriod: 1209600
+        VisibilityTimeout: 60
+        
+provider:
+  name: aws
+  runtime: nodejs6.10
+  stage: ${self:custom.currentStage}
+  region: ${self:custom.defaultRegion}
+  cfLogs: true
+  iamRoleStatements:
+  - Effect: Allow   
+    Action:
+      - lambda:InvokeFunction
+      - lambda:CreateEventSourceMapping
+      - lambda:ListEventSourceMappings
+      - lambda:ListFunction
+      - sqs:*
+    Resource: arn:aws:lambda:*:*:function:${self:provider.stage}-deliversMessageBoxes
+  - Effect: Allow   
+    Action:
+      - sqs:*
+    Resource: arn:aws:lambda:*:*:function:${self:provider.stage}-handleMessage
+  - Effect: Allow
+    Action:
+      - sqs:*
+      - lambda:*
+    Resource: arn:aws:sqs:${self:custom.defaultRegion}:${self:custom.idAWS}:${self:custom.sqs}
+  environment:
+    PAGE_ACCESS_TOKEN: $PAGE_ACCESS_TOKEN
+    VERIFY_TOKEN: $VERIFY_TOKEN
+    TABLE_USER_LOG: ${self:custom.defaultStage}-userLog
+    TABLE_USERS: ${self:custom.defaultStage}-users
+    TABLE_QUESTION_STATS: ${self:custom.defaultStage}-questionStat
+    TABLE_CONVERSATION_TOPIC: ${self:custom.defaultStage}-conversationTopic
+    REGION : ${self:custom.defaultRegion}
+    API_VERSION : 2012-11-05
+    MESSAGE_QUEUE_URL: https://sqs.${self:custom.defaultRegion}.amazonaws.com/${self:custom.idAWS}/${self:custom.sqs}
+  
+  sqs-alarms:
+    - queue: ${self:custom.sqs}
+      thresholds:
+        - 1
+        - 50
+        - 100
+        - 500
+        - 1000
+        - 5000
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
+
+custom:
+  defaultStage: dev
+  defaultRegion : eu-west-3
+  idAWS: $ID_AWS
+  currentStage: ${opt:stage, self:custom.defaultStage} # 'dev' is default unless overriden by --stage flag
+  sqs: ${self:custom.defaultStage}-messages
+  webpack:
+    webpackConfig: ./webpack.config.serverless.js
+    includeModules: true
